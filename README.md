@@ -135,6 +135,42 @@ sudo ./cctvscan 192.168.1.0/24
 sudo ./cctvscan targets.txt
 ```
 
+### Scanning an IP Database with eyehack
+
+`eyehack` is a second binary for scanning an **authorized IP database file**
+(`.txt` or `.csv`). It records, per host, whether it is **live/down**, whether
+it serves **video** (camera/NVR), and any **credentials** found — then saves
+everything to `<db-file>.results.json` for later filtering.
+
+```bash
+# Build both binaries
+go build -o eyehack ./cmd/eyehack
+
+# Full scan of a database file (txt: one IP/CIDR per line)
+sudo ./eyehack db.txt
+
+# Reuse saved results — filter without rescanning
+./eyehack db.txt -filter camera        # only cameras
+./eyehack db.txt -filter "camera creds" # cameras with credentials (AND)
+./eyehack db.txt -filter down          # hosts that are down
+./eyehack db.txt -filter video         # anything serving video
+
+# Force a fresh scan even when results exist
+sudo ./eyehack db.txt -filter nvr -rescan
+```
+
+**Filter categories:** `camera`, `server`, `nvr`, `dvr`, `device`, `unknown`,
+`live`, `down`, `video`, `creds`, `cve`.
+
+**Database formats:**
+- **txt** — one IP or CIDR per line; `#` comments allowed.
+- **csv** — the IP column is detected from a header (`ip`/`host`/`address`) or
+  from the column whose cells parse as IPs.
+
+Results are written next to the database as `db.txt.results.json`. Without
+`-filter`, `eyehack` always performs a fresh scan; with `-filter`, it reads the
+saved results (scanning first only when none exist).
+
 ### Advanced Scanning Options
 
 ```bash

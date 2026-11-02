@@ -40,6 +40,7 @@ type OptimizedProcessor struct {
 	debug     bool
 	credsFile string
 	outputDir string
+	hostCreds map[string][]string
 }
 
 // NewOptimizedProcessor creates a new optimized processor
@@ -49,6 +50,13 @@ func NewOptimizedProcessor(debug bool, credsFile, outputDir string) *OptimizedPr
 		credsFile: credsFile,
 		outputDir: outputDir,
 	}
+}
+
+// SetHostCreds registers credentials already known per host ("host" ->
+// "user:pass" list, taken from the target database). They are tested before
+// the wordlist on that host's login pages.
+func (p *OptimizedProcessor) SetHostCreds(creds map[string][]string) {
+	p.hostCreds = creds
 }
 
 // ProcessHosts processes multiple hosts concurrently
@@ -114,11 +122,14 @@ func (p *OptimizedProcessor) processHost(ctx context.Context, host string, ports
 		result.CVEs = fingerprint.OptimizedCVEsForBrand(result.Brand)
 	}
 
-	// Credential brute force if login pages found
+	// Credential brute force if login pages found. Credentials declared for
+	// this host in the target database are tested before the wordlist.
 	if len(result.LoginPages) > 0 {
-		if _, err := os.Stat(p.credsFile); !os.IsNotExist(err) {
-			result.Credentials = credbrute.OptimizedBruteForce(
-				ctx, host, result.LoginPages, p.credsFile, 5*time.Second,
+		known := p.hostCreds[host]
+		_, statErr := os.Stat(p.credsFile)
+		if len(known) > 0 || !os.IsNotExist(statErr) {
+			result.Credentials = credbrute.OptimizedBruteForceKnown(
+				ctx, host, result.LoginPages, p.credsFile, known, 5*time.Second,
 			)
 		}
 	}

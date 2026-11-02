@@ -5,12 +5,13 @@ This comprehensive guide covers all features and usage patterns for CCTVScan, an
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Command Line Options](#command-line-options)
-3. [Scanning Modes](#scanning-modes)
-4. [Advanced Features](#advanced-features)
-5. [Output Interpretation](#output-interpretation)
-6. [Examples](#examples)
-7. [Troubleshooting](#troubleshooting)
+2. [eyehack — IP Database Scanner](#eyehack--ip-database-scanner)
+3. [Command Line Options](#command-line-options)
+4. [Scanning Modes](#scanning-modes)
+5. [Advanced Features](#advanced-features)
+6. [Output Interpretation](#output-interpretation)
+7. [Examples](#examples)
+8. [Troubleshooting](#troubleshooting)
 
 ## Quick Start
 
@@ -43,6 +44,37 @@ sudo setcap cap_net_raw+ep $(which masscan)
 # Build the tool
 go build -o cctvscan ./cmd/cctvscan
 ```
+
+## eyehack — IP Database Scanner
+
+`eyehack` is a companion binary for scanning an **authorized IP database file**
+(`.txt` or `.csv`) and recording, per host, whether it is **live/down**, whether
+it serves **video**, and any **credentials** found.
+
+```bash
+# Build
+go build -o eyehack ./cmd/eyehack
+
+# Scan the database (results saved to db.txt.results.json)
+sudo ./eyehack db.txt
+
+# Filter saved results without rescanning
+./eyehack db.txt -filter camera
+./eyehack db.txt -filter "camera creds"   # AND semantics
+./eyehack db.txt -filter down
+sudo ./eyehack db.txt -filter nvr -rescan # force fresh scan
+```
+
+**Filters:** `camera`, `server`, `nvr`, `dvr`, `device`, `unknown`, `live`,
+`down`, `video`, `creds`, `cve`.
+
+**Database formats:**
+- **txt** — one IP/CIDR per line, `#` comments allowed.
+- **csv** — IP column auto-detected from a header (`ip`/`host`/`address`) or by
+  content.
+
+Without `-filter`, `eyehack` always scans fresh. With `-filter` it reads
+`<db-file>.results.json`, scanning first only when no results exist.
 
 ## Command Line Options
 

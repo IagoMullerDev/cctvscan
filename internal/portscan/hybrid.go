@@ -52,10 +52,12 @@ func (s *HybridScanner) Scan(ctx context.Context, targets []string) (map[string]
 	var discoveredPorts map[string][]int
 	var err error
 
-	if hasLocalhost {
-		// For localhost targets, use naabu only
+	// Unprivileged mode cannot use masscan (requires raw sockets/root),
+	// so fall back to naabu discovery even for external targets.
+	if hasLocalhost || s.cfg.Unprivileged {
+		// For localhost or unprivileged targets, use naabu only
 		if s.cfg.Debug {
-			log.Printf("DEBUG: Detected localhost targets, using naabu for discovery")
+			log.Printf("DEBUG: Detected localhost targets or unprivileged mode, using naabu for discovery")
 		}
 
 		naabuCfg := NaabuConfig{

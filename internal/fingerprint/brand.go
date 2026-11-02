@@ -320,23 +320,30 @@ func ExtractSoftwareInfo(body string) map[string]string {
 	return info
 }
 
+// loginSystems lists the login systems in priority order: the brand-specific
+// patterns come first and the broad "Generic" pattern must be tried last, so a
+// page like "Hikvision Login Page - login.jsp" is never shadowed by "login".
+// (A map here made the winner depend on Go's random map iteration order.)
+var loginSystems = []struct {
+	system  string
+	pattern *regexp.Regexp
+}{
+	{"Hikvision", regexp.MustCompile(`(?i)(?:hikvision|hik-connect|ivms|login\.jsp)`)},
+	{"Dahua", regexp.MustCompile(`(?i)(?:dahua|dss|smartpss|dmss|login\.html)`)},
+	{"Axis", regexp.MustCompile(`(?i)(?:axis|axis-cgi|axis communications)`)},
+	{"Sony", regexp.MustCompile(`(?i)(?:sony|ipela|snc)`)},
+	{"Bosch", regexp.MustCompile(`(?i)(?:bosch|flexidome|dinion)`)},
+	{"Samsung", regexp.MustCompile(`(?i)(?:samsung|hanwha|wisenet)`)},
+	{"Panasonic", regexp.MustCompile(`(?i)(?:panasonic|wv|bb|blc)`)},
+	{"Vivotek", regexp.MustCompile(`(?i)(?:vivotek|fd|sd)`)},
+	{"Generic", regexp.MustCompile(`(?i)(?:login|admin|webadmin|viewer)`)},
+}
+
 // DetectLoginSystem detects the login system used by the camera
 func DetectLoginSystem(body string) string {
-	loginPatterns := map[string]*regexp.Regexp{
-		"Hikvision": regexp.MustCompile(`(?i)(?:hikvision|hik-connect|ivms|login\.jsp)`),
-		"Dahua":     regexp.MustCompile(`(?i)(?:dahua|dss|smartpss|dmss|login\.html)`),
-		"Axis":      regexp.MustCompile(`(?i)(?:axis|axis-cgi|axis communications)`),
-		"Sony":      regexp.MustCompile(`(?i)(?:sony|ipela|snc)`),
-		"Bosch":     regexp.MustCompile(`(?i)(?:bosch|flexidome|dinion)`),
-		"Samsung":   regexp.MustCompile(`(?i)(?:samsung|hanwha|wisenet)`),
-		"Panasonic": regexp.MustCompile(`(?i)(?:panasonic|wv|bb|blc)`),
-		"Vivotek":   regexp.MustCompile(`(?i)(?:vivotek|fd|sd)`),
-		"Generic":   regexp.MustCompile(`(?i)(?:login|admin|webadmin|viewer)`),
-	}
-
-	for system, pattern := range loginPatterns {
-		if pattern.MatchString(body) {
-			return system
+	for _, lp := range loginSystems {
+		if lp.pattern.MatchString(body) {
+			return lp.system
 		}
 	}
 
